@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Autodesk.Revit.DB;
+using Autodesk.Revit.DB.Analysis;
 using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Selection;
 
@@ -11,6 +12,17 @@ namespace AirChair
 {
     [Autodesk.Revit.Attributes.Transaction(Autodesk.Revit.Attributes.TransactionMode.Manual)]
     [Autodesk.Revit.Attributes.Regeneration(Autodesk.Revit.Attributes.RegenerationOption.Manual)]
+    public class Chair
+    {
+        public XYZ Coordinate { get; set; }
+        public XYZ Orientation { get; set; }
+
+        public Chair(XYZ coordinate, XYZ orientation)
+        {
+            Coordinate = coordinate;
+            Orientation = orientation;
+        }
+    }
     public class InsertAirDuct : IExternalCommand
     {
         public List<Element> SelectElements(Document document)
@@ -45,6 +57,7 @@ namespace AirChair
             }
             return selElements;
         }
+
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
             UIDocument uidoc = commandData.Application.ActiveUIDocument;
