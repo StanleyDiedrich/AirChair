@@ -50,12 +50,20 @@ namespace AirChair
             UIDocument uidoc = commandData.Application.ActiveUIDocument;
             Document doc = uidoc.Document;
             List<Element> correlements = new List<Element>();
+            List<XYZ> points = new List<XYZ>();
             var pickedElements= SelectElements(doc);
             var categoryName = BuiltInCategory.OST_Furniture;
             correlements = pickedElements.Select(el => el).Where(el => el.Category.Name=="Мебель").ToList();
             foreach (Element element in correlements)
             {
-                TaskDialog.Show("Revit", $"{element.Id}");
+                var lpoint = element.Location as LocationPoint;
+                var point = lpoint.Point;
+                var x = point.X;
+                points.Add(point);
+            }
+            foreach(var point in points)
+            {
+                TaskDialog.Show("Revit", $"{point.X},{point.Y},{point.Z}");
             }
             return Result.Succeeded;
         }
