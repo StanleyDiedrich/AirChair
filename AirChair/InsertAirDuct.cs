@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using Autodesk.Revit.Attributes;
@@ -18,24 +19,28 @@ namespace AirChair
         public XYZ Coordinate { get; set; }
         public XYZ Orientation { get; set; }
         public string Name { get; set; }
-        public Chair(string name, XYZ coordinate, XYZ orientation)
+        public Element Element { get; set; }
+        public ElementId ElementId { get; set; }
+        public Chair(string name, XYZ coordinate, XYZ orientation, Element element, ElementId elementId)
         {
             Name = name;
             Coordinate = coordinate;
             Orientation = orientation;
+            Element = element;
+            ElementId = elementId;
         }
         public double GetRotation(Chair chair, AirTerminal airTerminal)
         {
             double angle = 0;
             XYZ orientationC = chair.Orientation;
             XYZ orientationA = airTerminal.TOrientation;
-            double Cx = Math.Round(orientationC.X);
-            double Cy = Math.Round(orientationC.Y);
-            double Cz = Math.Round(orientationC.Z);
+            double Cx = Math.Round(orientationC.X,2);
+            double Cy = Math.Round(orientationC.Y,2);
+            double Cz = Math.Round(orientationC.Z, 2);
 
-            double Ax = Math.Round(orientationA.X);
-            double Ay = Math.Round(orientationA.Y);
-            double Az = Math.Round(orientationA.Z);
+            double Ax = Math.Round(orientationA.X,2);
+            double Ay = Math.Round(orientationA.Y, 2);
+            double Az = Math.Round(orientationA.Z,2);
 
             XYZ mult = new XYZ(Cy * Az - Cz * Ay, Cz * Ax - Cx * Az, Cx * Ay - Cy * Ax);
 
@@ -45,14 +50,11 @@ namespace AirChair
 
             angle = Math.Acos(scalar / vect1 * vect2) * 180 / Math.PI;
 
-            if (mult.Z>=0)
+            if (mult.Z<0)
             {
-                angle = angle;
+                angle = -angle;
             }
-            else
-            {
-                angle=-angle;
-            }
+            
 
             return angle;
         }
@@ -128,13 +130,14 @@ namespace AirChair
 
             foreach (Element element in correlements)
             {
+                ElementId elementId = element.Id;
                 var lpoint = element.Location as LocationPoint;
                 var point = lpoint.Point;
                 var x = point.X;
                 string name = element.Name;
                 FamilyInstance familyInstance = element as FamilyInstance;
                 XYZ vector = familyInstance.FacingOrientation;
-                Chair chair = new Chair(name,point, vector);
+                Chair chair = new Chair(name,point, vector, element,elementId);
                 
                 chairs.Add(chair);
             }
@@ -151,8 +154,17 @@ namespace AirChair
                     }
                     try
                     {
+                        Element ch =  chair.Element;
+                        LocationPoint lp = ch.Location as LocationPoint;
+                        XYZ ppt = new XYZ(lp.Point.X, lp.Point.Y, 0);
+                        Line axis = Line.CreateBound(ppt, new XYZ(ppt.X, ppt.Y, ppt.Z + 10));
                         FamilyInstance fI = doc.Create.NewFamilyInstance(chair.Coordinate, familyType, Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
-
+                        var airpoint = fI.Location as LocationPoint;
+                        var apoint = airpoint.Point;
+                        AirTerminal ai = new AirTerminal(apoint, fI.FacingOrientation);
+                        double angle = chair.GetRotation(chair, ai);
+                        //TaskDialog.Show("Revit", $"{angle}");
+                        ElementTransformUtils.RotateElement(doc,fI.Id,axis,-Math.PI/180*angle);
                     }
                     catch
                     {
